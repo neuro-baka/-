@@ -1,0 +1,24 @@
+# depslib dependency file v1.0
+1725245012 source:d:\prog\ds\2024cb\list\sqlist.cpp
+	<iostream>
+	<string>
+	"stdio.h"
+	"stdlib.h"
+	"SqList.h"
+
+1725245043 d:\prog\ds\2024cb\list\sqlist.h
+
+1725245890 source:d:\prog\ds\2024cb\list\linklist.cpp
+	<iostream>
+	<string>
+	"stdio.h"
+	"stdlib.h"
+	"LinkList.h"
+
+1725245914 d:\prog\ds\2024cb\list\linklist.h
+
+1725245820 source:d:\prog\ds\2024cb\list\main.cpp
+	<iostream>
+	<string>
+	"LinkList.h"
+
