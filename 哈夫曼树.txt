@@ -1,0 +1,290 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAXVALUE  100000        //输入文本最大字符个数
+#define MAXLEAF   256           //最大叶结点个数，即最大不同字符个数
+#define MAXBIT    MAXLEAF-1     //编码最大长度
+#define MAXNODE   MAXLEAF*2-1   //最大结点个数
+
+typedef struct         //Huffman树结点结构体
+{
+    float weight;      //结点权值，这里是字符出现的频率，及频次/字符种类数
+    char ch_value;     //该节点对应的字符
+    int parent;        //父结点位置索引，初始-1
+    int lchild;        //左孩子位置索引，初始-1
+    int rchild;        //右孩子位置索引，初始-1
+} HNodeType;
+
+typedef struct         //Huffman编码结构体
+{
+    int bit[MAXBIT];   //该字符的哈夫曼编码
+    int start;         //该编码在数组bit中的开始位置
+    char ch_value;     //对应字符
+} HCodeType;
+
+void str_input(char str[])
+{
+    printf("请输入任意子字符串:\n");
+    //输入可包含空格的字符串，输入字符串存放在str中
+    gets(str);
+}
+
+int TextStatistics(char text[], char ch[], float weight[], int *length)
+{
+    //统计每种字符的出现频次，返回出现的不同字符的个数ch_index
+    //出现的字符存放在ch中，对应字符的出现频次存放在weight中, ch_index为ch中字符种类数
+    //length为text长度
+
+    int text_index = 0;  //text字符串索引
+    int ch_index = 0;     //计字符数组增加索引，仅用于出现不同字符时，将该字符加入到ch[]中。仅自增
+
+    int weight_index = 0;//频数更新索引。用于指定weight[]要更新频数的位置
+
+    while(text[text_index]!='\0')
+    {
+        //查找ch中，是否存在字符text[text_index]，返回查到的第一个字符的位置
+        char* pos = strchr(ch,text[text_index]);
+
+        //如果ch中无该字符。或者ch为空。就将text[text_index]加入到ch中
+        if(ch[0]=='\0'  || pos == NULL )
+        {
+
+            //加入到统计字符数组中
+            ch[ch_index] = text[text_index];
+            //新增一个字符的频数，当所有字符都统计完之后再计算频率
+            weight[ch_index] += 1;
+            ch_index++;
+        }
+        //如果字符串中有该字符
+        else
+        {
+            //找到该字符的索引位置，更新其频数
+            weight_index = pos - ch ;
+            weight[weight_index] += 1;
+
+        }
+
+        text_index++;
+    }
+    ch[ch_index] = '\0';//添加结束符
+    //根据频数计算频率
+    int index=0;
+    while(weight[index]!=0)
+    {
+        weight[index]/=text_index;
+        index++;
+    }
+
+    *length = text_index;  // 此时text_index即为源字符串text长度
+    return ch_index; //最终 ch_index的值即为text字符串中不同字符的个数
+}
+
+// 从 HuffNodes[0..range]中，找到最小的结点索引赋给s1,s2 。已经找到过的结点索引被储存在out[]中
+void select(HNodeType HuffNodes[],int range,int *s1,int *s2)
+{
+    //先找第一个最小值
+    float min1 = 5;
+
+    for(int index1=0; index1<=range; index1++)
+    {
+
+        if(HuffNodes[index1].weight < min1 && HuffNodes[index1].parent ==-1)
+        {
+            //判断该结点是否被选过。如果该结点parent为0，则其为被选
+            min1 = HuffNodes[index1].weight;
+            *s1 = index1 ;
+        }
+    }
+    
+    //找第2个最小值
+    float min2 = 5;
+    for(int index2=0; index2<=range ; index2++)
+    {
+        if(HuffNodes[index2].weight < min2 && HuffNodes[index2].parent ==-1 && index2!=*s1)
+        {
+            //判断该结点是否被选过。还要判断其是否被s1选了
+            min2 = HuffNodes[index2].weight;
+            *s2 = index2 ;
+        }
+    }
+}
+
+//构造一棵Huffman树，树结点存放在HuffNodes中
+int HuffmanTree(HNodeType HuffNodes[], float weight[], char ch[], int n)
+{
+    //构造一棵Huffman树，树结点存放在HuffNodes中
+    if(n>MAXLEAF)
+    {
+        printf("超出叶结点最大数量!\n");
+        return -1;
+    }
+    if(n<=1) return -1;
+
+    int m = 2*n-1;//结点总个数
+
+    int node_index = 0;
+    //构造各叶节点
+    for(; node_index < n; node_index++)
+    {
+        /*
+            HuffNodes[node_index]->weight
+            HuffNodes[node_index]->ch_value
+            HuffNodes[node_index]->parent
+            HuffNodes[node_index]->lchild
+            HuffNodes[node_index]->rchild
+        */
+        HuffNodes[node_index] = {weight[node_index],ch[node_index],-1,-1,-1};
+    }
+    //构造非叶节点
+    for(; node_index<m; node_index++)    HuffNodes[node_index] = {0,0,-1,-1,-1};
+
+    //构建Huffmantree
+
+    int s1,s2;//最小值索引
+
+    for(int i = n; i < m; i++)
+    {
+        select(HuffNodes,i-1,&s1,&s2);
+        HuffNodes[s1].parent = i;
+        HuffNodes[s2].parent = i;
+        HuffNodes[i].lchild = s1;
+        HuffNodes[i].rchild = s2;
+        HuffNodes[i].weight = HuffNodes[s1].weight + HuffNodes[s2].weight;
+
+    }
+
+    return m-1; // HuffNodes数组中的最后一位，是Huffman树的根结点索引。
+}
+
+void HuffmanCode(HNodeType HuffNodes[], HCodeType HuffCodes[], char ch[], int n)
+{
+    //生成Huffman编码，Huffman编码存放在HuffCodes中（一个位置存储一个节点的哈夫曼编码，单个结点的哈夫曼编码在bit数组中)
+    int start;
+    for(int i =0 ; i<n; i++)
+    {
+        start = n-2;
+        //字符ch[i]对应的Huffman编码（存储在bit数组中）起始位置，从右往左存.每个结点的哈夫曼编码的长度不超过（叶子结点个数n-1），因此bit数组只需要使用(n-1)的长度。
+        //而哈夫曼编码是从哈夫曼树的叶子结点开始一直追溯到根结点按照左右赋予0/1值的，所以倒着编码，bit数组起始下标应该是(n-2)，每编码一位就减一
+        HuffCodes[i].ch_value = ch[i];  // 存储该字符值
+        for(int c = i, f=HuffNodes[i].parent ; f!=-1; c =f,f=HuffNodes[f].parent)  //从叶子到根逆向求编码
+        {
+            if(c == HuffNodes[f].lchild) HuffCodes[i].bit[start--]=0;
+            else HuffCodes[i].bit[start--]=1;
+        }
+        HuffCodes[i].start = start+1;
+    }
+}
+
+int encoding(HCodeType HuffCodes[],char text[],char ch[],int n, int length, int coding_str[])
+{
+    printf("输入的字符串为:%s\n",text);
+    printf("其对应Huffman编码为（逗号分割版本）:\n");
+    int coding_str_idx = 0;  //编码串索引
+    for(int text_idx=0; text_idx<length; text_idx++) //从左到右遍历原字符串中各字符
+    {
+
+        char* pos = strchr(ch,text[text_idx]);  //查找ch中，字符text[text_idx]索引
+        // 字符text[text_idx]对应于ch[pos - ch]
+        //其对应的Huffman编码，即保存在HuffCodes[pos - ch].bit中
+        for(int j = HuffCodes[pos - ch].start; j < n-1; j++)
+        {
+            printf("%d", HuffCodes[pos - ch].bit[j]);
+            coding_str[coding_str_idx++] = HuffCodes[pos - ch].bit[j];
+        }
+        printf(",");
+    }
+    printf("\n");
+    return coding_str_idx;  // 编码串长度
+}
+
+
+//对Huffman编码串coding_str进行译码。res_str为译码结果
+int decoding(HNodeType HuffNodes[], int coding_str[],int length, int root, char res_str[])
+{
+    //从左到右遍历编码串，同时查找Huffman树（从根结点开始）；
+    //编码串出现0（1），则查看Huffman树左（右）孩子结点，验证其是否为叶子结点。若否，则继续此步骤；
+    //若是，则可译出该字符，并再从根结点开始查找。
+    int tree_idx = root;  //Huffman树节点索引
+    int code_idx = 0; //Huffman编码串索引
+    int res_idx = 0;  //译码结果索引
+    while(code_idx < length)
+    {
+        while(HuffNodes[tree_idx].lchild != -1 and HuffNodes[tree_idx].rchild != -1)  //验证是否为叶子节点
+        {
+            if(coding_str[code_idx] == 0)   //查看左孩子结点
+            {
+                tree_idx = HuffNodes[tree_idx].lchild;
+            }
+            else   //查看右孩子结点
+            {
+                tree_idx = HuffNodes[tree_idx].rchild;
+            }
+            code_idx +=1;
+        }
+        res_str[res_idx++] = HuffNodes[tree_idx].ch_value;
+        tree_idx = root;
+    }
+    return res_idx;
+}
+
+int main()
+{
+    HNodeType HuffNodes[MAXNODE];   // 定义一个结点结构体数组
+    HCodeType HuffCodes[MAXLEAF];   // 定义一个编码结构体数组
+    char text[MAXVALUE+1], ch[MAXLEAF];
+    float weight[MAXLEAF], result[MAXNODE];
+    int i, j, n, resultIndex, length;
+
+    str_input(text);
+
+    //1.统计字符总数n，输入长度length
+    n = TextStatistics(text, ch, weight, &length);
+    if(n==1)
+    {
+        printf("只有一种字符，不用编码了。请多输入几种字符\n");
+        return 0;
+    }
+
+    // 2.构造哈夫曼树和哈夫曼编码
+    int root = HuffmanTree(HuffNodes, weight, ch, n);
+    if (root<0)
+    {
+        printf("Huffman树构造失败");
+        return 0;
+    }
+    
+    HuffmanCode(HuffNodes, HuffCodes, ch, n);
+
+    for (i=0; i<n; i++)
+    {
+        printf("%c的Huffman编码是：", ch[i]);
+
+        for(j=HuffCodes[i].start; j<n-1; j++)
+            printf("%d", HuffCodes[i].bit[j]);
+
+        printf("\n");
+    }
+
+    // 3.转换为Huffman编码
+    int coding_str[MAXBIT*length];  //Huffman编码串
+    int coding_length = encoding(HuffCodes,text,ch, n, length, coding_str);
+    printf("其对应Huffman编码为（无分割版本）:\n");
+    for (int i = 0; i < coding_length; i++)
+    {
+        printf("%d", coding_str[i]);
+    }
+    printf("\n");
+
+    // 4.译码过程
+    char res_str[length];  //译码结果
+    int res_length = decoding(HuffNodes, coding_str, coding_length, root, res_str);
+    printf("Huffman译码结果为:");
+    for (int i = 0; i < res_length; i++)
+    {
+        printf("%c", res_str[i]);
+    }
+    printf("\n");
+    
+    system("pause");
+    return 0;
+}
